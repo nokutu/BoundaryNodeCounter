@@ -1,13 +1,20 @@
 package counter;
 
 import org.openstreetmap.osmosis.core.Osmosis;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.xml.sax.SAXException;
 
-import java.io.*;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -31,24 +38,37 @@ public class Main {
     FileWriter fw = null;
     File f = null;
     try {
-      nodes = getNodes(province);
-      f = new File("polygon.txt");
-      if (!f.exists()) {
-        f.createNewFile();
-      }
-      fw = new FileWriter(f);
-      fw.write(generateOsmosisPolygon(nodes));
-      fw.close();
+      String queryString = new Query(province).toString();
+      URL osm = new URL(HOSTNAME);
+      HttpURLConnection connection = (HttpURLConnection) osm.openConnection();
+      connection.setDoInput(true);
+      connection.setDoOutput(true);
+      connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
-      Osmosis.run(new String[]{"--read-pbf", "spain-latest.osm.pbf", "--bounding-polygon", "polygon.txt", "--write-xml", "test.osm"});
-      //Process p = Runtime.getRuntime().exec("./osmosis-latest/bin/osmosis --read-pbf spain-latest.osm.pbt --bounding-polygon polygon.txt --write-xml " + province +".xml");
-      //p.waitFor();
+      DataOutputStream printout = new DataOutputStream(connection.getOutputStream());
+      printout.writeBytes("data=" + URLEncoder.encode(queryString, "utf-8"));
+      printout.flush();
+      printout.close();
+
+      DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+      DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+      Document doc = dBuilder.parse(connection.getInputStream());
+
+      String id = ((Element) doc.getElementsByTagName("relation").item(0)).getAttribute("id");
+      Process p = Runtime.getRuntime().exec("perl getbound.pl " + id);
+      p.waitFor();
+
+      Osmosis.run(new String[]{"--read-pbf", "spain-latest.osm.pbf", "--bounding-polygon", "polygon.poly", "--write-xml", "test.osm"});
 
     } catch (IOException e) {
       e.printStackTrace();
-    } /*catch (InterruptedException e) {
+    } catch (SAXException e) {
       e.printStackTrace();
-    } */ finally {
+    } catch (ParserConfigurationException e) {
+      e.printStackTrace();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    } finally {
       if (fw != null) {
         try {
           fw.close();
@@ -56,46 +76,20 @@ public class Main {
           e.printStackTrace();
         }
         if (f != null && f.exists()) {
-          f.delete();
+          //f.delete();
         }
       }
     }
   }
 
 
-  private static List<float[]> getNodes(String province) throws IOException {
-    List<float[]> ret = new ArrayList<float[]>();
-
-    String queryString = new Query(province).toString();
-    URL osm = new URL(HOSTNAME);
-    HttpURLConnection connection = (HttpURLConnection) osm.openConnection();
-    connection.setDoInput(true);
-    connection.setDoOutput(true);
-    connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-
-    DataOutputStream printout = new DataOutputStream(connection.getOutputStream());
-    printout.writeBytes("data=" + URLEncoder.encode(queryString, "utf-8"));
-    printout.flush();
-    printout.close();
-
-    BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-    String line;
-    while ((line = br.readLine()) != null) {
-      if (line.contains("node")) {
-        String[] parts = line.split("\"");
-        ret.add(new float[]{Float.parseFloat(parts[3]), Float.parseFloat(parts[5])});
-      }
-    }
-    br.close();
-    return ret;
-  }
-
   private static String generateOsmosisPolygon(List<float[]> nodes) {
     String ret = "";
     ret += "polygon\n";
     ret += "1\n";
+    Random r = new Random();
     for (float[] node : nodes) {
-      if (new Random().nextBoolean()) {
+      if (r.nextFloat() > 0f) {
         ret += node[0] + " " + node[1] + "\n";
       }
     }
