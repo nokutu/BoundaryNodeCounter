@@ -1,9 +1,5 @@
 package counter;
 
-import com.vividsolutions.jts.geom.Polygon;
-import crosby.binary.osmosis.OsmosisReader;
-import de.topobyte.osm4j.pbf.util.PbfUtil;
-
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
