@@ -11,12 +11,12 @@ mainClassName = "counter.Main"
 
 repositories {
     mavenCentral()
-    maven {
-        url 'http://mvn.topobyte.de'
-    }
 }
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
     compile 'org.openstreetmap.osmosis:osmosis-pbf:0.44.1'
+    compile 'org.openstreetmap.osmosis:osmosis-xml:0.44.1'
+    compile 'org.openstreetmap.osmosis:osmosis-core:0.44.1'
+    compile 'org.openstreetmap.osmosis:osmosis-areafilter:0.44.1'
 }

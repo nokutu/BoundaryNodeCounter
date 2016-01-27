@@ -1,11 +1,15 @@
 package counter;
 
+import org.openstreetmap.osmosis.core.Osmosis;
+
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Created by nokutu on 27/01/16.
@@ -36,19 +40,15 @@ public class Main {
       fw.write(generateOsmosisPolygon(nodes));
       fw.close();
 
-      Process p = Runtime.getRuntime().exec("./osmosis-latest/bin/osmosis --read-pbf spain-latest.osm.pbt --bounding-polygon polygon.txt --write-xml " + province +".xml");
-      BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
-      String line = null;
-      p.waitFor();
-      while((line = br.readLine()) != null) {
-        System.out.println(line);
-      }
+      Osmosis.run(new String[]{"--read-pbf", "spain-latest.osm.pbf", "--bounding-polygon", "polygon.txt", "--write-xml", "test.osm"});
+      //Process p = Runtime.getRuntime().exec("./osmosis-latest/bin/osmosis --read-pbf spain-latest.osm.pbt --bounding-polygon polygon.txt --write-xml " + province +".xml");
+      //p.waitFor();
 
     } catch (IOException e) {
       e.printStackTrace();
-    } catch (InterruptedException e) {
+    } /*catch (InterruptedException e) {
       e.printStackTrace();
-    } finally {
+    } */ finally {
       if (fw != null) {
         try {
           fw.close();
@@ -95,7 +95,9 @@ public class Main {
     ret += "polygon\n";
     ret += "1\n";
     for (float[] node : nodes) {
-      ret += node[0] + " " + node[1] + "\n";
+      if (new Random().nextBoolean()) {
+        ret += node[0] + " " + node[1] + "\n";
+      }
     }
     ret += "END\n";
     ret += "END";
