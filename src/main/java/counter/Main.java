@@ -5,13 +5,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
+import javax.print.Doc;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -29,36 +27,43 @@ public class Main {
     getProvince("Principado de Asturias");
   }
 
-  private static void readPBF(File file) {
-
-  }
 
   private static void getProvince(String province) {
-    List<float[]> nodes = null;
-    FileWriter fw = null;
-    File f = null;
+    File polygonFile = null;
+    File provinceFile = null;
     try {
       String queryString = new Query(province).toString();
-      URL osm = new URL(HOSTNAME);
-      HttpURLConnection connection = (HttpURLConnection) osm.openConnection();
-      connection.setDoInput(true);
-      connection.setDoOutput(true);
-      connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+      Document doc = apiQuery(queryString);
 
-      DataOutputStream printout = new DataOutputStream(connection.getOutputStream());
-      printout.writeBytes("data=" + URLEncoder.encode(queryString, "utf-8"));
-      printout.flush();
-      printout.close();
-
-      DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-      DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-      Document doc = dBuilder.parse(connection.getInputStream());
+      polygonFile = new File("polygon.txt");
+      if (!polygonFile.exists()) {
+        polygonFile.createNewFile();
+      }
+      BufferedWriter bw = new BufferedWriter(new FileWriter(polygonFile));
 
       String id = ((Element) doc.getElementsByTagName("relation").item(0)).getAttribute("id");
       Process p = Runtime.getRuntime().exec("perl getbound.pl " + id);
-      p.waitFor();
+      BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+      String line;
+      while ((line = br.readLine()) != null) {
+        bw.write(line + "\n");
+      }
+      br.close();
+      bw.close();
 
-      Osmosis.run(new String[]{"--read-pbf", "spain-latest.osm.pbf", "--bounding-polygon", "polygon.poly", "--write-xml", "test.osm"});
+      Osmosis.run(new String[]{"-q", "--read-pbf", "spain-latest.osm.pbf", "--bounding-polygon", "polygon.poly", "--write-xml", "province.osm"});
+
+      provinceFile = new File("province.osm");
+      long c = 0;
+      br = new BufferedReader(new FileReader(provinceFile));
+      while ((line = br.readLine()) != null) {
+        if (line.contains("node")) {
+          c++;
+        }
+      }
+      br.close();
+
+      System.out.println(province + ": " + c);
 
     } catch (IOException e) {
       e.printStackTrace();
@@ -66,20 +71,31 @@ public class Main {
       e.printStackTrace();
     } catch (ParserConfigurationException e) {
       e.printStackTrace();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
     } finally {
-      if (fw != null) {
-        try {
-          fw.close();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-        if (f != null && f.exists()) {
-          //f.delete();
-        }
+      if (polygonFile != null && polygonFile.exists()) {
+        polygonFile.delete();
+      }
+      if (provinceFile != null && provinceFile.exists()) {
+        provinceFile.delete();
       }
     }
+  }
+
+  private static Document apiQuery(String query) throws IOException, ParserConfigurationException, SAXException {
+    URL osm = new URL(HOSTNAME);
+    HttpURLConnection connection = (HttpURLConnection) osm.openConnection();
+    connection.setDoInput(true);
+    connection.setDoOutput(true);
+    connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+
+    DataOutputStream printout = new DataOutputStream(connection.getOutputStream());
+    printout.writeBytes("data=" + URLEncoder.encode(query, "utf-8"));
+    printout.flush();
+    printout.close();
+
+    DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+    DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+    return dBuilder.parse(connection.getInputStream());
   }
 
 
