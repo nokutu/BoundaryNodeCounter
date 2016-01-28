@@ -30,5 +30,4 @@ dependencies {
     compile 'org.openstreetmap.osmosis:osmosis-xml:0.44.1'
     compile 'org.openstreetmap.osmosis:osmosis-core:0.44.1'
     compile 'org.openstreetmap.osmosis:osmosis-areafilter:0.44.1'
-    compile 'commons-logging:commons-logging:1.2'
 }

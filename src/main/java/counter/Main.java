@@ -1,7 +1,7 @@
 package counter;
 
-import org.apache.commons.logging.impl.SimpleLog;
 import org.openstreetmap.osmosis.core.Osmosis;
+import org.openstreetmap.osmosis.core.OsmosisRuntimeException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -15,7 +15,6 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 /**
  * Created by nokutu on 27/01/16.
@@ -23,9 +22,9 @@ import java.util.Random;
 public class Main {
 
   private final static String HOSTNAME = "http://www.overpass-api.de/api/interpreter";
-  private SimpleLog log = new SimpleLog(Main.class.getName());
+  private Log log = new Log();
 
-  private List<Region> regions;
+  private ArrayList<Region> regions;
   private Config config;
 
   public static void main(String[] args) {
@@ -40,13 +39,11 @@ public class Main {
   private void run() {
     try {
       parseRegions();
-      log.info("Regions file parsed");
+      log.i("Regions file parsed");
       if (getIDs()) {
-        System.out.println("Relations IDs succesfully obtained");
-        for (Region r : regions) {
-          //getProvince(r);
-          System.out.println(r.getStats());
-        }
+        log.i("Relations IDs succesfully obtained");
+        regions.forEach((Region r) -> getProvince(r));
+        regions.forEach((Region r) -> System.out.println(r.getStats()));
       }
     } catch (IOException | ParserConfigurationException | SAXException e) {
       e.printStackTrace();
@@ -135,6 +132,9 @@ public class Main {
 
     } catch (IOException e) {
       e.printStackTrace();
+    } catch (OsmosisRuntimeException e) {
+      log.e(e);
+      log.e("You need perl, XML::Simple library and List::MoreUtils");
     } finally {
       if (polygonFile != null && polygonFile.exists()) {
         polygonFile.delete();
@@ -161,22 +161,4 @@ public class Main {
     DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
     return dBuilder.parse(connection.getInputStream());
   }
-
-
-  private String generateOsmosisPolygon(List<float[]> nodes) {
-    String ret = "";
-    ret += "polygon\n";
-    ret += "1\n";
-    Random r = new Random();
-    for (float[] node : nodes) {
-      if (r.nextFloat() > 0f) {
-        ret += node[0] + " " + node[1] + "\n";
-      }
-    }
-    ret += "END\n";
-    ret += "END";
-
-    return ret;
-  }
-
 }
