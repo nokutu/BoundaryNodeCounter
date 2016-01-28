@@ -1,0 +1,54 @@
+#config
+$language=es
+#name;admin_level;pupulation;surface(km²)
+Álava;6;321932;3037
+Albacete;6;395007;14926
+Provincia de Alicante;6;1842963;5817
+Provincia de Almería;6;690851;8775
+Principado de Asturias;4;1041754;10603
+Ávila;6;165786;8050
+Badajoz;6;686032;21766
+Barcelona;6;5427322;7733
+Burgos;6;366900;14022
+Cáceres;6;405560;19868
+Provincia de Cádiz;6;1248625;7440
+Cantabria;4;585411;5321
+Provincia de Castellón;6;574906;6636
+Ciudad Real;6;514543;19813
+Córdoba;6;795718;13771
+La Coruña;6;1128807;7950
+Cuenca;6;206653;17140
+Gerona;6;740537;5909
+Granada;6;919329;12646;
+Guadalajara;6;254388;12214
+Guipúzcoa;6;707298;1997
+Provincia de Huelva;6;522216;10127
+Huesca;6;221942;15636
+Islas Baleares;4;1124744;4991
+Jaén;6;652253;13496
+León;6;480209;15580
+Lérida;6;430655;12172
+Lugo;6;338873;9856
+Comunidad de Madrid;4;6377364;8027
+Región de Murcia;4;1463249;11313
+Comunidad Foral de Navarra;4;636638;10391
+Orense;6;318739;7273
+Palencia;6;165782;8052
+Las Palmas;6;1106779;4065
+Pontevedra;6;948496;4494
+La Rioja;4;319002;5045
+Salamanca;6;342045;12349
+Santa Cruz de Tenerife;6;1021868;3381
+Segovia;6;158085;6920
+Sevilla;6;1939625;14036
+Soria;6;92221;10306
+Tarragona;6;792619;6302
+Teruel;6;137838;14809
+Toledo;6;692124;15369
+Valencia;6;2521681;10807
+Valladolid;6;527508;8110
+Vizcaya;6;1151905;2217
+Zamora;6;6;184238;10561
+Zaragoza;6;967157;17274
+Ceuta;4;84726;18.5
+Peñón de Vélez de la Gomera;4;84621;13.4

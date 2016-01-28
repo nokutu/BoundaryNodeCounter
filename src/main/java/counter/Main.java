@@ -1,11 +1,11 @@
 package counter;
 
+import org.apache.commons.logging.impl.SimpleLog;
 import org.openstreetmap.osmosis.core.Osmosis;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
-import javax.print.Doc;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -13,6 +13,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -22,28 +23,94 @@ import java.util.Random;
 public class Main {
 
   private final static String HOSTNAME = "http://www.overpass-api.de/api/interpreter";
+  private SimpleLog log = new SimpleLog(Main.class.getName());
+
+  private List<Region> regions;
+  private Config config;
 
   public static void main(String[] args) {
-    getProvince("Principado de Asturias");
+    new Main().run();
+  }
+
+  private Main() {
+    regions = new ArrayList<>();
+    config = new Config();
+  }
+
+  private void run() {
+    try {
+      parseRegions();
+      log.info("Regions file parsed");
+      if (getIDs()) {
+        System.out.println("Relations IDs succesfully obtained");
+        for (Region r : regions) {
+          //getProvince(r);
+          System.out.println(r.getStats());
+        }
+      }
+    } catch (IOException | ParserConfigurationException | SAXException e) {
+      e.printStackTrace();
+    }
+  }
+
+  private void parseRegions() throws IOException {
+    File f = new File("regions.txt");
+    if (!f.exists()) {
+      throw new IllegalStateException("Regions file does not exist");
+    }
+    BufferedReader br = new BufferedReader(new FileReader(f));
+    String line;
+    while ((line = br.readLine()) != null) {
+      if (line.startsWith("#")) {
+        // Ignore, it is a comment
+      } else if (line.startsWith("$")) {
+        // Config
+        line = line.substring(1);
+        String[] parts = line.split("=");
+        config.applyConfig(parts[0].trim(), parts[1].trim());
+      } else {
+        String[] parts = line.split(";");
+        regions.add(new Region(parts[0].trim(), Integer.parseInt(parts[1].trim()), Integer.parseInt(parts[2].trim()), Float.parseFloat(parts[3].trim())));
+      }
+    }
+  }
+
+  private boolean getIDs() throws ParserConfigurationException, SAXException, IOException {
+    boolean ret = true;
+    for (Region r : regions) {
+      String queryString = new Query(r, config, true).toString();
+      Document doc = apiQuery(queryString);
+      if (doc.getElementsByTagName("relation").getLength() == 0) {
+        queryString = new Query(r, config, false).toString();
+        doc = apiQuery(queryString);
+      }
+      try {
+        r.setRelationID(Long.parseLong(((Element) doc.getElementsByTagName("relation").item(0)).getAttribute("id")));
+      } catch (NullPointerException e) {
+        System.out.println("Error with: " + r.getName());
+        ret = false;
+        continue;
+      }
+      if (r.getRelationID() == 0) {
+        throw new IllegalStateException("Region " + r.getName() + " is invalid");
+      }
+    }
+    return ret;
   }
 
 
-  private static void getProvince(String province) {
+  private void getProvince(Region region) {
     File polygonFile = null;
     File provinceFile = null;
     try {
-      String queryString = new Query(province).toString();
-      Document doc = apiQuery(queryString);
-
       polygonFile = new File("polygon.txt");
       if (!polygonFile.exists()) {
         polygonFile.createNewFile();
       }
-      BufferedWriter bw = new BufferedWriter(new FileWriter(polygonFile));
 
-      String id = ((Element) doc.getElementsByTagName("relation").item(0)).getAttribute("id");
-      Process p = Runtime.getRuntime().exec("perl getbound.pl " + id);
+      Process p = Runtime.getRuntime().exec("perl getbound.pl " + region.getRelationID());
       BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+      BufferedWriter bw = new BufferedWriter(new FileWriter(polygonFile));
       String line;
       while ((line = br.readLine()) != null) {
         bw.write(line + "\n");
@@ -63,13 +130,10 @@ public class Main {
       }
       br.close();
 
-      System.out.println(province + ": " + c);
+      region.setNodes(c);
+      System.out.println("Progress: " + (regions.indexOf(region) + 1) + "/" + regions.size());
 
     } catch (IOException e) {
-      e.printStackTrace();
-    } catch (SAXException e) {
-      e.printStackTrace();
-    } catch (ParserConfigurationException e) {
       e.printStackTrace();
     } finally {
       if (polygonFile != null && polygonFile.exists()) {
@@ -81,7 +145,7 @@ public class Main {
     }
   }
 
-  private static Document apiQuery(String query) throws IOException, ParserConfigurationException, SAXException {
+  private Document apiQuery(String query) throws IOException, ParserConfigurationException, SAXException {
     URL osm = new URL(HOSTNAME);
     HttpURLConnection connection = (HttpURLConnection) osm.openConnection();
     connection.setDoInput(true);
@@ -99,7 +163,7 @@ public class Main {
   }
 
 
-  private static String generateOsmosisPolygon(List<float[]> nodes) {
+  private String generateOsmosisPolygon(List<float[]> nodes) {
     String ret = "";
     ret += "polygon\n";
     ret += "1\n";
